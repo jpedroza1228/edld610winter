@@ -1,0 +1,130 @@
+---
+title: "Final Project Visualizations"
+author: "Jonathan Pedroza"
+date: "February 5, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(here)
+library(rio)
+library(nhanesA)
+library(xaringan)
+library(ggridges)
+
+```
+
+```{r}
+# Initial time to get data from nhanes datasets
+
+# demographics from 2011-2012
+demo_g <- nhanes('DEMO_G')
+
+# demographics from 2013-2014
+demo_h <- nhanes('DEMO_H')
+
+# demographics from 2015-2016
+demo_i <- nhanes('DEMO_I')
+
+
+# physical activity data frames 2011-2012
+paq_g <- nhanes('PAQ_G')
+
+# physical activity data frames 2013-2014
+paq_h <- nhanes('PAQ_H')
+
+# physical activity data frames 2015-2016
+paq_i <- nhanes('PAQ_I')
+
+
+# Example of exporting data into csv files
+write.csv(demo_g, "demo_g.csv")
+write.csv(demo_h, "demo_h.csv")
+write.csv(demo_i, "demo_i.csv")
+
+write.csv(paq_g, "paq_g.csv")
+write.csv(paq_h, "paq_h.csv")
+write.csv(paq_i, "paq_i.csv")
+
+```
+
+```{r loading csv files}
+ 
+demo_g <- import(here("data", "demo_g.csv"),
+                setclass = "tbl_df") %>% 
+  janitor::clean_names()
+demo_h <- import(here("data", "demo_h.csv"),
+                setclass = "tbl_df") %>% 
+  janitor::clean_names()
+demo_i <- import(here("data", "demo_i.csv"),
+                setclass = "tbl_df") %>% 
+  janitor::clean_names()
+
+paq_g <- import(here("data", "paq_g.csv"),
+                setclass = "tbl_df") %>% 
+  janitor::clean_names()
+paq_h <- import(here("data", "paq_h.csv"),
+                setclass = "tbl_df") %>% 
+  janitor::clean_names()
+paq_i <- import(here("data", "paq_i.csv"),
+                setclass = "tbl_df") %>% 
+  janitor::clean_names()
+
+
+```
+
+```{r joins}
+# gotta look for those keys
+demo_g %>% 
+  count(seqn) %>% 
+  filter(n>1)
+
+demo_h %>% 
+  count(seqn) %>% 
+  filter(n>1)
+
+demo_i %>% 
+  count(seqn) %>% 
+  filter(n>1)
+
+paq_g %>% 
+  count(seqn) %>% 
+  filter(n>1)
+
+paq_h %>% 
+  count(seqn) %>% 
+  filter(n>1)
+
+paq_i %>% 
+  count(seqn) %>% 
+  filter(n>1)
+
+# keys are all good based on id or seqn variable name
+
+# gonna use joins this time
+# need to use full joins because missing data makes inner joins reduce to 0 obs.
+super_demo <- full_join(demo_g, demo_h)
+demo <- full_join(super_demo, demo_i)
+
+super_pa <- full_join(paq_g, paq_h)
+pa <- full_join(super_pa, paq_i)
+
+demo %>%
+  count(seqn) %>% 
+  filter(n>1)
+
+pa %>% 
+  count(seqn) %>% 
+  filter(n>1)
+
+```
+
+```{r selecting specific variables}
+
+```
+

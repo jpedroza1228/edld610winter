@@ -122,9 +122,163 @@ pa %>%
   count(seqn) %>% 
   filter(n>1)
 
+complete <- full_join(demo, pa)
+
 ```
 
 ```{r selecting specific variables}
+psych::describe(complete, na.rm = TRUE)
 
+complete <- complete %>%
+  select(v1,
+         seqn,
+         sddsrvyr,
+         riagendr,
+         ridageyr,
+         ridreth3,
+         dmdborn4,
+         dmdcitzn,
+         dmdyrsus,
+         dmdeduc2,
+         dmdfmsiz,
+         indhhin2,
+         pad615,
+         pad630,
+         pad660, 
+         pad675, 
+         pad680, 
+         paq706,
+         paq710,
+         paq715)
+  
+  
+complete <- complete %>%
+  mutate(data_cycle = recode(sddsrvyr, '7' = "11_12",
+                             '8' = "13_14",
+                             '9' = "15_16"))
+
+complete <- complete %>% 
+  mutate(gender = recode(riagendr, '1' = "male",
+                         '2' = "female"))
+
+complete <- complete %>% 
+  mutate(age = ridageyr)
+
+complete <- complete %>% 
+  mutate(race = recode(ridreth3, '1' = "mexican",
+                       '2' = "other_hispanic",
+                       '3' = "white",
+                       '4' = "black",
+                       '6' = "asian",
+                       '7' = "multi"))
+
+complete <- complete %>% 
+  mutate(birth_country = recode(dmdborn4, '1' = "us_born",
+                                '2' = "other"))
+
+complete <- complete %>% 
+  mutate(citizen = recode(dmdcitzn, '1' = "citizen",
+                          '2' = "not_citizen"))
+
+complete <- complete %>% 
+  mutate(length_us = recode(dmdyrsus, '1' = "less_year",
+                            '2' = "1_5yr",
+                            '3' = "5_10yr",
+                            '4' = "10_15yr",
+                            '5' = "15_20yr",
+                            '6' = "20_30yr",
+                            '7' = "30_40yr",
+                            '8' = "40_50yr",
+                            '9' = "50_plus_yr"))
+
+complete <- complete %>% 
+  mutate(ed = recode(dmdeduc2, '1' = "less_9",
+                     '2' = "9_11",
+                     '3' = "highschool",
+                     '4' = "aa",
+                     '5' = "college_grad"))
+
+complete <- complete %>% 
+  mutate(household = recode(dmdfmsiz, '1' = "1",
+                            '2' = "2",
+                            '3' = "3",
+                            '4' = "4",
+                            '5' = "5",
+                            '6' = "6",
+                            '7' = "7_plus"))
+
+complete <- complete %>% 
+  mutate(income = recode(indhhin2, '1' = "0_5k",
+                         '2' = "5_10k",
+                         '3' = "10_15k",
+                         '4' = "15_20k",
+                         '5' = "20_25k",
+                         '6' = "25_35k",
+                         '7' = "35_45k",
+                         '8' = "45_55k",
+                         '9' = "55_65k",
+                         '10' = "65_75k",
+                         '12' = NA_character_,
+                         '13' = NA_character_,
+                         '14' = "75_100k",
+                         '15' = "100_plus"))
+
+complete <- complete %>% 
+  mutate(vig_work = pad615)
+
+complete <- complete %>% 
+  mutate(mod_work = pad630)
+
+complete <- complete %>% 
+  mutate(vig_rec_pa = pad660)
+
+complete <- complete %>% 
+  mutate(mod_rec_pa = pad675)
+
+complete <- complete %>% 
+  mutate(sed = pad680)
+
+complete <- complete %>% 
+  mutate(days_active_60 = recode(paq706,
+                                 '0' = "0_day",
+                                 '1' = "1_day",
+                                 '2' = "2_day",
+                                 '3' = "3_day",
+                                 '4' = "4_day",
+                                 '5' = "5_day",
+                                 '6' = "6_day",
+                                 '7' = "7_day"))
+
+complete <- complete %>% 
+  mutate(hours_tv = recode(paq710, '0' = "less_hour",
+                             '1' = "1_hour",
+                             '2' = "2_hours",
+                             '3' = "3_hours",
+                             '4' = "4_hours",
+                             '5' = "5_hours_plus",
+                             '8' = "no_tv"))
+
+complete <- complete %>% 
+  mutate(hours_comp = recode(paq715, '0' = "less_hour",
+                             '1' = "1_hour",
+                             '2' = "2_hours",
+                             '3' = "3_hours",
+                             '4' = "4_hours",
+                             '5' = "5_hours_plus",
+                             '8' = "no_comp"))
+
+names(complete)
+
+data <- complete %>%
+  select(-3:-144)
+
+psych::describe(data)
+         
+```
+
+
+```{r}
+ggplot(data, aes(data_cycle, sed)) +
+  geom_col(alpha = .7)
 ```
 

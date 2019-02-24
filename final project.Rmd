@@ -16,6 +16,7 @@ library(rio)
 library(nhanesA)
 library(xaringan)
 library(ggridges)
+library(viridis)
 
 ```
 
@@ -130,7 +131,7 @@ complete <- full_join(demo, pa)
 psych::describe(complete, na.rm = TRUE)
 
 complete <- complete %>%
-  select(v1,
+  dplyr::select(v1,
          seqn,
          sddsrvyr,
          riagendr,
@@ -150,78 +151,99 @@ complete <- complete %>%
          paq706,
          paq710,
          paq715)
-  
-  
+
+table(complete$pad615)
+
+# need to do this for all variables
+# complete <- complete %>% 
+#    naniar::replace_with_na(replace = list(pad615 = c(7777, 9999),
+#      paq715 = c(77, 99),
+#      pad630 = c(7777, 9999),
+#      pad660 = c(7777, 9999),
+#      pad675 = c(7777, 9999),
+#      pad680 = c(7777, 9999),
+#      paq706 = c(77, 99),
+#      paq710 = c(77, 99)))
+
 complete <- complete %>%
-  mutate(data_cycle = recode(sddsrvyr, '7' = "11_12",
-                             '8' = "13_14",
-                             '9' = "15_16"))
+  mutate(data_cycle = case_when(sddsrvyr == 7 ~ "11_12",
+                            sddsrvyr == 8 ~ "13_14",
+                            sddsrvyr == 9 ~ "15_16",
+                            TRUE ~ NA_character_))
 
 complete <- complete %>% 
-  mutate(gender = recode(riagendr, '1' = "male",
-                         '2' = "female"))
+  mutate(gender = case_when(riagendr == 1 ~ "male",
+                            riagendr == 2 ~ "female",
+                            TRUE ~ NA_character_))
 
 complete <- complete %>% 
   mutate(age = ridageyr)
 
 complete <- complete %>% 
-  mutate(race = recode(ridreth3, '1' = "mexican",
-                       '2' = "other_hispanic",
-                       '3' = "white",
-                       '4' = "black",
-                       '6' = "asian",
-                       '7' = "multi"))
+  mutate(race = case_when(ridreth3 == 1 ~ "mexican",
+                       ridreth3 == 2 ~ "other_hispanic",
+                       ridreth3 == 3 ~ "white",
+                       ridreth3 == 4 ~ "black",
+                       ridreth3 == 6 ~ "asian",
+                       ridreth3 == 7 ~ "multi",
+                       TRUE ~ NA_character_))
 
 complete <- complete %>% 
-  mutate(birth_country = recode(dmdborn4, '1' = "us_born",
-                                '2' = "other"))
+  mutate(birth_country = case_when(dmdborn4 == 1 ~ "us_born",
+                                dmdborn4 == 2 ~ "other",
+                                TRUE ~ NA_character_))
 
 complete <- complete %>% 
-  mutate(citizen = recode(dmdcitzn, '1' = "citizen",
-                          '2' = "not_citizen"))
+  mutate(citizen = case_when(dmdcitzn == 1 ~ "citizen",
+                          dmdcitzn == 2 ~ "not_citizen",
+                          TRUE ~ NA_character_))
 
 complete <- complete %>% 
-  mutate(length_us = recode(dmdyrsus, '1' = "less_year",
-                            '2' = "1_5yr",
-                            '3' = "5_10yr",
-                            '4' = "10_15yr",
-                            '5' = "15_20yr",
-                            '6' = "20_30yr",
-                            '7' = "30_40yr",
-                            '8' = "40_50yr",
-                            '9' = "50_plus_yr"))
+  mutate(length_us = case_when(dmdyrsus == 1 ~ "less_year",
+                            dmdyrsus == 2 ~ "1_5yr",
+                            dmdyrsus == 3 ~ "5_10yr",
+                            dmdyrsus == 4 ~ "10_15yr",
+                            dmdyrsus == 5 ~ "15_20yr",
+                            dmdyrsus == 6 ~ "20_30yr",
+                            dmdyrsus == 7 ~ "30_40yr",
+                            dmdyrsus == 8 ~ "40_50yr",
+                            dmdyrsus == 9 ~ "50_plus_yr",
+                            TRUE ~ NA_character_))
 
 complete <- complete %>% 
-  mutate(ed = recode(dmdeduc2, '1' = "less_9",
-                     '2' = "9_11",
-                     '3' = "highschool",
-                     '4' = "aa",
-                     '5' = "college_grad"))
+  mutate(ed = case_when(dmdeduc2 == 1 ~ "less_9",
+                     dmdeduc2 == 2 ~ "9_11",
+                     dmdeduc2 == 3 ~ "highschool",
+                     dmdeduc2 == 4 ~ "aa",
+                     dmdeduc2 == 5 ~ "college_grad",
+                     TRUE ~ NA_character_))
 
 complete <- complete %>% 
-  mutate(household = recode(dmdfmsiz, '1' = "1",
-                            '2' = "2",
-                            '3' = "3",
-                            '4' = "4",
-                            '5' = "5",
-                            '6' = "6",
-                            '7' = "7_plus"))
+  mutate(household = case_when(dmdfmsiz == 1 ~ "1",
+                            dmdfmsiz == 2 ~ "2",
+                            dmdfmsiz == 3 ~ "3",
+                            dmdfmsiz == 4 ~ "4",
+                            dmdfmsiz == 5 ~ "5",
+                            dmdfmsiz == 6 ~ "6",
+                            dmdfmsiz == 7 ~ "7_plus",
+                            TRUE ~ NA_character_))
 
 complete <- complete %>% 
-  mutate(income = recode(indhhin2, '1' = "0_5k",
-                         '2' = "5_10k",
-                         '3' = "10_15k",
-                         '4' = "15_20k",
-                         '5' = "20_25k",
-                         '6' = "25_35k",
-                         '7' = "35_45k",
-                         '8' = "45_55k",
-                         '9' = "55_65k",
-                         '10' = "65_75k",
-                         '12' = NA_character_,
-                         '13' = NA_character_,
-                         '14' = "75_100k",
-                         '15' = "100_plus"))
+  mutate(income = case_when(indhhin2 == 1 ~ "0_5k",
+                         indhhin2 == 2 ~ "5_10k",
+                         indhhin2 == 3 ~ "10_15k",
+                         indhhin2 == 4 ~ "15_20k",
+                         indhhin2 == 5 ~ "20_25k",
+                         indhhin2 == 6 ~ "25_35k",
+                         indhhin2 == 7 ~ "35_45k",
+                         indhhin2 == 8 ~ "45_55k",
+                         indhhin2 == 9 ~ "55_65k",
+                         indhhin2 == 10 ~ "65_75k",
+                         indhhin2 == 12 ~ NA_character_,
+                         indhhin2 == 13 ~ NA_character_,
+                         indhhin2 == 14 ~ "75_100k",
+                         indhhin2 == 15 ~ "100_plus",
+                         TRUE ~ NA_character_))
 
 complete <- complete %>% 
   mutate(vig_work = pad615)
@@ -239,46 +261,60 @@ complete <- complete %>%
   mutate(sed = pad680)
 
 complete <- complete %>% 
-  mutate(days_active_60 = recode(paq706,
-                                 '0' = "0_day",
-                                 '1' = "1_day",
-                                 '2' = "2_day",
-                                 '3' = "3_day",
-                                 '4' = "4_day",
-                                 '5' = "5_day",
-                                 '6' = "6_day",
-                                 '7' = "7_day"))
+  mutate(days_active_60 = case_when(paq706 == 0 ~ "0_day",
+                                 paq706 == 1 ~ "1_day",
+                                 paq706 == 2 ~ "2_day",
+                                 paq706 == 3 ~ "3_day",
+                                 paq706 == 4 ~ "4_day",
+                                 paq706 == 5 ~ "5_day",
+                                 paq706 == 6 ~ "6_day",
+                                 paq706 == 7 ~ "7_day",
+                                 TRUE ~ NA_character_))
 
 complete <- complete %>% 
-  mutate(hours_tv = recode(paq710, '0' = "less_hour",
-                             '1' = "1_hour",
-                             '2' = "2_hours",
-                             '3' = "3_hours",
-                             '4' = "4_hours",
-                             '5' = "5_hours_plus",
-                             '8' = "no_tv"))
+  mutate(hours_tv = case_when(paq710 == 0 ~ "less_hour",
+                             paq710 == 1 ~ "1_hour",
+                             paq710 == 2 ~ "2_hours",
+                             paq710 == 3 ~ "3_hours",
+                             paq710 == 4 ~ "4_hours",
+                             paq710 == 5 ~ "5_hours_plus",
+                             paq710 == 8 ~ "no_tv",
+                           TRUE ~ NA_character_))
 
 complete <- complete %>% 
-  mutate(hours_comp = recode(paq715, '0' = "less_hour",
-                             '1' = "1_hour",
-                             '2' = "2_hours",
-                             '3' = "3_hours",
-                             '4' = "4_hours",
-                             '5' = "5_hours_plus",
-                             '8' = "no_comp"))
+  mutate(hours_comp = case_when(paq715 == 0 ~ "less_hour",
+                             paq715 == 1 ~ "1_hour",
+                             paq715 == 2 ~ "2_hours",
+                             paq715 == 3 ~ "3_hours",
+                             paq715 == 4 ~ "4_hours",
+                             paq715 == 5 ~ "5_hours_plus",
+                             paq715 == 8 ~ "no_comp",
+                             TRUE ~ NA_character_))
+
+```
+
+```{r}
 
 names(complete)
 
 data <- complete %>%
-  select(-3:-144)
+  select(-3:-20)
 
-psych::describe(data)
-         
+table(data$mod_rec_pa)
+
+data$age_cut <- cut(data$age, breaks = c(18, 25, 55, Inf),
+                    labels = c("young adult", "adult",
+                               "older adult"))
+
 ```
 
 
 ```{r}
-ggplot(data, aes(data_cycle, sed)) +
-  geom_col(alpha = .7)
+ggplot(data, aes(age, fill = age_cut)) +
+  geom_histogram(color = "white",
+                 alpha = .7,
+                 bins = 20) + 
+  facet_wrap(~data_cycle)
+
 ```
 

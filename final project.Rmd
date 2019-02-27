@@ -10,6 +10,8 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
+# install.packages("digest")
+# install.packages("Rcpp")
 library(tidyverse)
 library(here)
 library(rio)
@@ -17,6 +19,8 @@ library(nhanesA)
 library(xaringan)
 library(ggridges)
 library(viridis)
+# devtools::install_github("hrbrmstr/ggalt")
+library(ggalt)
 
 ```
 
@@ -79,8 +83,7 @@ paq_i <- import(here("data", "paq_i.csv"),
 
 ```
 
-```{r joins}
-# gotta look for those keys
+```{r}
 demo_g %>% 
   count(seqn) %>% 
   filter(n>1)
@@ -104,11 +107,11 @@ paq_h %>%
 paq_i %>% 
   count(seqn) %>% 
   filter(n>1)
+```
 
-# keys are all good based on id or seqn variable name
 
-# gonna use joins this time
-# need to use full joins because missing data makes inner joins reduce to 0 obs.
+```{r joins}
+
 super_demo <- full_join(demo_g, demo_h)
 demo <- full_join(super_demo, demo_i)
 
@@ -123,16 +126,15 @@ pa %>%
   count(seqn) %>% 
   filter(n>1)
 
-complete <- full_join(demo, pa)
+complete <- left_join(demo, pa, by = "seqn")
 
 ```
 
-```{r selecting specific variables}
+```{r}
 psych::describe(complete, na.rm = TRUE)
 
 complete <- complete %>%
-  dplyr::select(v1,
-         seqn,
+  dplyr::select(seqn,
          sddsrvyr,
          riagendr,
          ridageyr,
@@ -151,24 +153,25 @@ complete <- complete %>%
          paq706,
          paq710,
          paq715)
+```
 
-table(complete$pad615)
 
-# need to do this for all variables
-# complete <- complete %>% 
-#    naniar::replace_with_na(replace = list(pad615 = c(7777, 9999),
-#      paq715 = c(77, 99),
-#      pad630 = c(7777, 9999),
-#      pad660 = c(7777, 9999),
-#      pad675 = c(7777, 9999),
-#      pad680 = c(7777, 9999),
-#      paq706 = c(77, 99),
-#      paq710 = c(77, 99)))
+```{r selecting specific variables}
 
 complete <- complete %>%
-  mutate(data_cycle = case_when(sddsrvyr == 7 ~ "11_12",
-                            sddsrvyr == 8 ~ "13_14",
-                            sddsrvyr == 9 ~ "15_16",
+   naniar::replace_with_na(replace = list(pad615 = c(7777, 9999),
+     paq715 = c(77, 99),
+     pad630 = c(7777, 9999),
+     pad660 = c(7777, 9999),
+     pad675 = c(7777, 9999),
+     pad680 = c(7777, 9999),
+     paq706 = c(77, 99),
+     paq710 = c(77, 99)))
+
+complete <- complete %>%
+  mutate(data_cycle = case_when(sddsrvyr == 7 ~ "2011_2012",
+                            sddsrvyr == 8 ~ "2013_2014",
+                            sddsrvyr == 9 ~ "2015_2016",
                             TRUE ~ NA_character_))
 
 complete <- complete %>% 
@@ -295,15 +298,11 @@ complete <- complete %>%
 
 ```{r}
 
-names(complete)
-
 data <- complete %>%
-  select(-3:-20)
+  select(-2:-19)
 
-table(data$mod_rec_pa)
-
-data$age_cut <- cut(data$age, breaks = c(18, 25, 55, Inf),
-                    labels = c("young adult", "adult",
+data$age_cut <- cut(data$age, breaks = c(0, 18, 25, 55, Inf),
+                    labels = c("minor", "young adult", "adult",
                                "older adult"))
 
 ```
@@ -313,8 +312,141 @@ data$age_cut <- cut(data$age, breaks = c(18, 25, 55, Inf),
 ggplot(data, aes(age, fill = age_cut)) +
   geom_histogram(color = "white",
                  alpha = .7,
-                 bins = 20) + 
-  facet_wrap(~data_cycle)
+                 bins = 50) + 
+  facet_wrap(~data_cycle) +
+  labs(x = "Age",
+       y = "Count",
+       Title = "Breakdown of Participants by Age",
+       subtitle = "Separated by Age Group",
+       caption = "NHANES data from 2011-2012, 2013-2014, 2015-2016") +
+  guides(fill = "none")
 
+# Part of assignment to examine differences in sedentary behaviors by race and income
+
+ggplot(data, aes(gender, sed)) +
+  geom_col(alpha = .7, position = "dodge2", aes(fill = race)) +
+  scale_y_continuous(limits = c(0, 1250)) +
+  scale_fill_viridis_d() +
+  coord_flip() +
+  facet_wrap(~data_cycle) +
+    labs(x = "Gender",
+       y = "Sedentary Behaviors",
+       Title = "Breakdown of Participants by Gender",
+       subtitle = "Separated by Different Racial/Ethnic Groups",
+       caption = "NHANES data from 2011-2012, 2013-2014, 2015-2016") +
+  guides(fill = "none")
+
+ggplot(data, aes(gender, sed)) +
+  geom_col(alpha = .7, position = "dodge2", aes(fill = income)) +
+  scale_y_continuous(limits = c(0, 1250)) +
+  scale_fill_viridis_d() +
+  coord_flip() +
+  facet_wrap(~data_cycle) +
+    labs(x = "Gender",
+       y = "Sedentary Behaviors",
+       Title = "Breakdown of Participants by Gender",
+       subtitle = "Separated by Different Income",
+       caption = "NHANES data from 2011-2012, 2013-2014, 2015-2016") +
+  guides(fill = "none")
+
+# Part of the assignment to examine differences in activity by race and income
+
+ggplot(data, aes(gender, days_active_60)) +
+  geom_col(alpha = .7, position = "dodge2", aes(fill = race)) +
+  scale_fill_viridis_d() +
+  coord_flip() +
+  facet_wrap(~data_cycle) +
+    labs(x = "Gender",
+       y = "Days of Engagement in 60 Minutes of Physical Activity ",
+       Title = "Breakdown of Participants by Gender",
+       subtitle = "Separated by Different Racial/Ethnic Groups",
+       caption = "NHANES data from 2011-2012, 2013-2014, 2015-2016") +
+  guides(fill = "none")
+
+ggplot(data, aes(gender, days_active_60)) +
+  geom_col(alpha = .7, position = "dodge2", aes(fill = income)) +
+  scale_fill_viridis_d() +
+  coord_flip() +
+  facet_wrap(~data_cycle) +
+    labs(x = "Gender",
+       y = "Days of Engagement in 60 Minutes of Physical Activity ",
+       Title = "Breakdown of Participants by Gender",
+       subtitle = "Separated by Different Income",
+       caption = "NHANES data from 2011-2012, 2013-2014, 2015-2016") +
+  guides(fill = "none")
+
+```
+
+```{r}
+less_yr <- data %>%
+  filter(race == "mexican" | race == "other_hispanic") %>% 
+  filter(length_us == "less_year")
+
+fifty_plus <- data %>% 
+  filter(race == "mexican" | race == "other_hispanic") %>% 
+  filter(length_us == "50_plus_yr")
+
+# These two plots are one plot for my project
+# the first is looking at working physical activity and then the next one is similar
+# with recreational physical activity
+ggplot(data, aes(mod_work, vig_work)) +
+  geom_jitter(aes(color = race)) +
+  geom_encircle(aes(mod_work, vig_work),
+                data = less_yr,
+                color = "red",
+                size = 2,
+                expand = .04) +
+  geom_encircle(aes(mod_work, vig_work),
+                data = fifty_plus,
+                color = "blue",
+                size = 2,
+                expand = .04) +
+  facet_wrap(~data_cycle) +
+  scale_color_viridis_d()
+
+ggplot(data, aes(mod_rec_pa, vig_rec_pa)) +
+  geom_jitter(aes(color = race), size = 2) +
+  geom_encircle(aes(mod_rec_pa, vig_rec_pa),
+                data = less_yr,
+                color = "red",
+                size = 2,
+                expand = .04) +
+  geom_encircle(aes(mod_rec_pa, vig_rec_pa),
+                data = fifty_plus,
+                color = "blue",
+                size = 2,
+                expand = .04) +
+  facet_wrap(~data_cycle) +
+  scale_color_viridis_d()
+```
+
+```{r}
+# exploratory plots
+
+ggplot(data, aes(forcats::fct_reorder(data_cycle, sed), sed)) +
+  geom_col(alpha = .7, position = "dodge2", aes(fill = race)) +
+  scale_y_continuous(limits = c(0, 1250)) +
+  scale_fill_viridis_d(option = "magma")
+
+
+ggplot(data, aes(data_cycle)) +
+  geom_bar(aes(fill = fct_reorder(race, age)), position = "dodge2") +
+  scale_fill_viridis_d(option = "magma")
+
+ggplot(data, aes(race)) +
+  geom_bar(position = "dodge2", aes(fill = income)) +
+  facet_wrap(~data_cycle) +
+  coord_flip() +
+  scale_fill_viridis_d()
+
+ggplot(data, aes(gender, days_active_60)) +
+  geom_tile(aes(fill = age)) +
+  scale_fill_viridis_c()
+
+  ggplot(data, aes(mod_work, vig_work)) +
+  geom_smooth(aes(color = race), se = FALSE, method = "lm") +
+  facet_wrap(~data_cycle) +
+  scale_color_viridis_d() +
+  coord_flip()
 ```
 

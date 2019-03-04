@@ -12,16 +12,17 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 # install.packages("digest")
 # install.packages("Rcpp")
-library(tidyverse)
-library(here)
-library(rio)
-library(nhanesA)
-library(xaringan)
-library(ggridges)
-library(viridis)
-# devtools::install_github("hrbrmstr/ggalt")
-library(ggalt)
-
+# library(tidyverse)
+# library(here)
+# library(rio)
+# library(nhanesA)
+# library(xaringan)
+# library(ggridges)
+# library(viridis)
+# # devtools::install_github("hrbrmstr/ggalt")
+# library(ggalt)
+pacman::p_load(rio, tidyverse, here, nhanesA, xaringan, ggridges, viridis, ggalt)
+# Yufei: it works well to load the pkgs by library each of them, but my personal preference is to use p_load to wrap up things in a single line :) 
 ```
 
 ```{r}
@@ -157,52 +158,37 @@ complete <- complete %>%
 
 
 ```{r selecting specific variables}
-
 complete <- complete %>%
-   naniar::replace_with_na(replace = list(pad615 = c(7777, 9999),
+  naniar::replace_with_na(replace = list(pad615 = c(7777, 9999),
      paq715 = c(77, 99),
      pad630 = c(7777, 9999),
      pad660 = c(7777, 9999),
      pad675 = c(7777, 9999),
      pad680 = c(7777, 9999),
      paq706 = c(77, 99),
-     paq710 = c(77, 99)))
-
-complete <- complete %>%
+     paq710 = c(77, 99))) %>% 
   mutate(data_cycle = case_when(sddsrvyr == 7 ~ "2011_2012",
                             sddsrvyr == 8 ~ "2013_2014",
                             sddsrvyr == 9 ~ "2015_2016",
-                            TRUE ~ NA_character_))
-
-complete <- complete %>% 
-  mutate(gender = case_when(riagendr == 1 ~ "male",
+                            TRUE ~ NA_character_),
+         gender = case_when(riagendr == 1 ~ "male",
                             riagendr == 2 ~ "female",
-                            TRUE ~ NA_character_))
-
-complete <- complete %>% 
-  mutate(age = ridageyr)
-
-complete <- complete %>% 
-  mutate(race = case_when(ridreth3 == 1 ~ "mexican",
+                            TRUE ~ NA_character_),
+         age = ridageyr,
+         race = case_when(ridreth3 == 1 ~ "mexican",
                        ridreth3 == 2 ~ "other_hispanic",
                        ridreth3 == 3 ~ "white",
                        ridreth3 == 4 ~ "black",
                        ridreth3 == 6 ~ "asian",
                        ridreth3 == 7 ~ "multi",
-                       TRUE ~ NA_character_))
-
-complete <- complete %>% 
-  mutate(birth_country = case_when(dmdborn4 == 1 ~ "us_born",
+                       TRUE ~ NA_character_),
+         birth_country = case_when(dmdborn4 == 1 ~ "us_born",
                                 dmdborn4 == 2 ~ "other",
-                                TRUE ~ NA_character_))
-
-complete <- complete %>% 
-  mutate(citizen = case_when(dmdcitzn == 1 ~ "citizen",
+                                TRUE ~ NA_character_),
+         citizen = case_when(dmdcitzn == 1 ~ "citizen",
                           dmdcitzn == 2 ~ "not_citizen",
-                          TRUE ~ NA_character_))
-
-complete <- complete %>% 
-  mutate(length_us = case_when(dmdyrsus == 1 ~ "less_year",
+                          TRUE ~ NA_character_),
+         length_us = case_when(dmdyrsus == 1 ~ "less_year",
                             dmdyrsus == 2 ~ "1_5yr",
                             dmdyrsus == 3 ~ "5_10yr",
                             dmdyrsus == 4 ~ "10_15yr",
@@ -211,28 +197,32 @@ complete <- complete %>%
                             dmdyrsus == 7 ~ "30_40yr",
                             dmdyrsus == 8 ~ "40_50yr",
                             dmdyrsus == 9 ~ "50_plus_yr",
-                            TRUE ~ NA_character_))
-
-complete <- complete %>% 
-  mutate(ed = case_when(dmdeduc2 == 1 ~ "less_9",
+                            TRUE ~ NA_character_),
+         length_us = case_when(dmdyrsus == 1 ~ "less_year",
+                            dmdyrsus == 2 ~ "1_5yr",
+                            dmdyrsus == 3 ~ "5_10yr",
+                            dmdyrsus == 4 ~ "10_15yr",
+                            dmdyrsus == 5 ~ "15_20yr",
+                            dmdyrsus == 6 ~ "20_30yr",
+                            dmdyrsus == 7 ~ "30_40yr",
+                            dmdyrsus == 8 ~ "40_50yr",
+                            dmdyrsus == 9 ~ "50_plus_yr",
+                            TRUE ~ NA_character_),
+         ed = case_when(dmdeduc2 == 1 ~ "less_9",
                      dmdeduc2 == 2 ~ "9_11",
                      dmdeduc2 == 3 ~ "highschool",
                      dmdeduc2 == 4 ~ "aa",
                      dmdeduc2 == 5 ~ "college_grad",
-                     TRUE ~ NA_character_))
-
-complete <- complete %>% 
-  mutate(household = case_when(dmdfmsiz == 1 ~ "1",
+                     TRUE ~ NA_character_),
+         household = case_when(dmdfmsiz == 1 ~ "1",
                             dmdfmsiz == 2 ~ "2",
                             dmdfmsiz == 3 ~ "3",
                             dmdfmsiz == 4 ~ "4",
                             dmdfmsiz == 5 ~ "5",
                             dmdfmsiz == 6 ~ "6",
                             dmdfmsiz == 7 ~ "7_plus",
-                            TRUE ~ NA_character_))
-
-complete <- complete %>% 
-  mutate(income = case_when(indhhin2 == 1 ~ "0_5k",
+                            TRUE ~ NA_character_),
+         income = case_when(indhhin2 == 1 ~ "0_5k",
                          indhhin2 == 2 ~ "5_10k",
                          indhhin2 == 3 ~ "10_15k",
                          indhhin2 == 4 ~ "15_20k",
@@ -246,25 +236,13 @@ complete <- complete %>%
                          indhhin2 == 13 ~ NA_character_,
                          indhhin2 == 14 ~ "75_100k",
                          indhhin2 == 15 ~ "100_plus",
-                         TRUE ~ NA_character_))
-
-complete <- complete %>% 
-  mutate(vig_work = pad615)
-
-complete <- complete %>% 
-  mutate(mod_work = pad630)
-
-complete <- complete %>% 
-  mutate(vig_rec_pa = pad660)
-
-complete <- complete %>% 
-  mutate(mod_rec_pa = pad675)
-
-complete <- complete %>% 
-  mutate(sed = pad680)
-
-complete <- complete %>% 
-  mutate(days_active_60 = case_when(paq706 == 0 ~ "0_day",
+                         TRUE ~ NA_character_),
+         vig_work = pad615,
+         mod_work = pad630,
+         vig_rec_pa = pad660,
+         mod_rec_pa = pad675,
+         sed = pad680,
+         days_active_60 = case_when(paq706 == 0 ~ "0_day",
                                  paq706 == 1 ~ "1_day",
                                  paq706 == 2 ~ "2_day",
                                  paq706 == 3 ~ "3_day",
@@ -272,45 +250,177 @@ complete <- complete %>%
                                  paq706 == 5 ~ "5_day",
                                  paq706 == 6 ~ "6_day",
                                  paq706 == 7 ~ "7_day",
-                                 TRUE ~ NA_character_))
-
-complete <- complete %>% 
-  mutate(hours_tv = case_when(paq710 == 0 ~ "less_hour",
+                                 TRUE ~ NA_character_),
+         hours_tv = case_when(paq710 == 0 ~ "less_hour",
                              paq710 == 1 ~ "1_hour",
                              paq710 == 2 ~ "2_hours",
                              paq710 == 3 ~ "3_hours",
                              paq710 == 4 ~ "4_hours",
                              paq710 == 5 ~ "5_hours_plus",
                              paq710 == 8 ~ "no_tv",
-                           TRUE ~ NA_character_))
-
-complete <- complete %>% 
-  mutate(hours_comp = case_when(paq715 == 0 ~ "less_hour",
+                           TRUE ~ NA_character_),
+         hours_comp = case_when(paq715 == 0 ~ "less_hour",
                              paq715 == 1 ~ "1_hour",
                              paq715 == 2 ~ "2_hours",
                              paq715 == 3 ~ "3_hours",
                              paq715 == 4 ~ "4_hours",
                              paq715 == 5 ~ "5_hours_plus",
                              paq715 == 8 ~ "no_comp",
-                             TRUE ~ NA_character_))
+                             TRUE ~ NA_character_))  
+
+# Yufei: just looks a little bit concise to put them together!
+
+# complete <- complete %>%
+#   mutate(data_cycle = case_when(sddsrvyr == 7 ~ "2011_2012",
+#                             sddsrvyr == 8 ~ "2013_2014",
+#                             sddsrvyr == 9 ~ "2015_2016",
+#                             TRUE ~ NA_character_))
+# 
+# complete <- complete %>% 
+#   mutate(gender = case_when(riagendr == 1 ~ "male",
+#                             riagendr == 2 ~ "female",
+#                             TRUE ~ NA_character_))
+# 
+# complete <- complete %>% 
+#   mutate(age = ridageyr)
+# 
+# complete <- complete %>% 
+#   mutate(race = case_when(ridreth3 == 1 ~ "mexican",
+#                        ridreth3 == 2 ~ "other_hispanic",
+#                        ridreth3 == 3 ~ "white",
+#                        ridreth3 == 4 ~ "black",
+#                        ridreth3 == 6 ~ "asian",
+#                        ridreth3 == 7 ~ "multi",
+#                        TRUE ~ NA_character_))
+# 
+# complete <- complete %>% 
+#   mutate(birth_country = case_when(dmdborn4 == 1 ~ "us_born",
+#                                 dmdborn4 == 2 ~ "other",
+#                                 TRUE ~ NA_character_))
+
+# complete <- complete %>% 
+#   mutate(citizen = case_when(dmdcitzn == 1 ~ "citizen",
+#                           dmdcitzn == 2 ~ "not_citizen",
+#                           TRUE ~ NA_character_))
+# 
+# complete <- complete %>% 
+#   mutate(length_us = case_when(dmdyrsus == 1 ~ "less_year",
+#                             dmdyrsus == 2 ~ "1_5yr",
+#                             dmdyrsus == 3 ~ "5_10yr",
+#                             dmdyrsus == 4 ~ "10_15yr",
+#                             dmdyrsus == 5 ~ "15_20yr",
+#                             dmdyrsus == 6 ~ "20_30yr",
+#                             dmdyrsus == 7 ~ "30_40yr",
+#                             dmdyrsus == 8 ~ "40_50yr",
+#                             dmdyrsus == 9 ~ "50_plus_yr",
+#                             TRUE ~ NA_character_))
+# 
+# complete <- complete %>% 
+#   mutate(ed = case_when(dmdeduc2 == 1 ~ "less_9",
+#                      dmdeduc2 == 2 ~ "9_11",
+#                      dmdeduc2 == 3 ~ "highschool",
+#                      dmdeduc2 == 4 ~ "aa",
+#                      dmdeduc2 == 5 ~ "college_grad",
+#                      TRUE ~ NA_character_))
+# 
+# complete <- complete %>% 
+#   mutate(household = case_when(dmdfmsiz == 1 ~ "1",
+#                             dmdfmsiz == 2 ~ "2",
+#                             dmdfmsiz == 3 ~ "3",
+#                             dmdfmsiz == 4 ~ "4",
+#                             dmdfmsiz == 5 ~ "5",
+#                             dmdfmsiz == 6 ~ "6",
+#                             dmdfmsiz == 7 ~ "7_plus",
+#                             TRUE ~ NA_character_))
+# 
+# complete <- complete %>% 
+#   mutate(income = case_when(indhhin2 == 1 ~ "0_5k",
+#                          indhhin2 == 2 ~ "5_10k",
+#                          indhhin2 == 3 ~ "10_15k",
+#                          indhhin2 == 4 ~ "15_20k",
+#                          indhhin2 == 5 ~ "20_25k",
+#                          indhhin2 == 6 ~ "25_35k",
+#                          indhhin2 == 7 ~ "35_45k",
+#                          indhhin2 == 8 ~ "45_55k",
+#                          indhhin2 == 9 ~ "55_65k",
+#                          indhhin2 == 10 ~ "65_75k",
+#                          indhhin2 == 12 ~ NA_character_,
+#                          indhhin2 == 13 ~ NA_character_,
+#                          indhhin2 == 14 ~ "75_100k",
+#                          indhhin2 == 15 ~ "100_plus",
+#                          TRUE ~ NA_character_))
+# 
+# complete <- complete %>% 
+#   mutate(vig_work = pad615,
+#          mod_work = pad630,
+#          vig_rec_pa = pad660,
+#          mod_rec_pa = pad675,
+#          sed = pad680)
+# 
+# # complete <- complete %>% 
+# #   mutate(mod_work = pad630)
+# # 
+# # complete <- complete %>% 
+# #   mutate(vig_rec_pa = pad660)
+# # 
+# # complete <- complete %>% 
+# #   mutate(mod_rec_pa = pad675)
+# # 
+# # complete <- complete %>% 
+# #   mutate(sed = pad680)
+# 
+# complete <- complete %>% 
+#   mutate(days_active_60 = case_when(paq706 == 0 ~ "0_day",
+#                                  paq706 == 1 ~ "1_day",
+#                                  paq706 == 2 ~ "2_day",
+#                                  paq706 == 3 ~ "3_day",
+#                                  paq706 == 4 ~ "4_day",
+#                                  paq706 == 5 ~ "5_day",
+#                                  paq706 == 6 ~ "6_day",
+#                                  paq706 == 7 ~ "7_day",
+#                                  TRUE ~ NA_character_))
+# 
+# complete <- complete %>% 
+#   mutate(hours_tv = case_when(paq710 == 0 ~ "less_hour",
+#                              paq710 == 1 ~ "1_hour",
+#                              paq710 == 2 ~ "2_hours",
+#                              paq710 == 3 ~ "3_hours",
+#                              paq710 == 4 ~ "4_hours",
+#                              paq710 == 5 ~ "5_hours_plus",
+#                              paq710 == 8 ~ "no_tv",
+#                            TRUE ~ NA_character_))
+# 
+# complete <- complete %>% 
+#   mutate(hours_comp = case_when(paq715 == 0 ~ "less_hour",
+#                              paq715 == 1 ~ "1_hour",
+#                              paq715 == 2 ~ "2_hours",
+#                              paq715 == 3 ~ "3_hours",
+#                              paq715 == 4 ~ "4_hours",
+#                              paq715 == 5 ~ "5_hours_plus",
+#                              paq715 == 8 ~ "no_comp",
+#                              TRUE ~ NA_character_))
 
 ```
 
 ```{r}
 
 data <- complete %>%
-  select(-2:-19)
-
-data$age_cut <- cut(data$age, breaks = c(0, 18, 25, 55, Inf),
+  select(-2:-19) %>% 
+  mutate(age_cut = cut(age, breaks = c(0, 18, 25, 55, Inf),
                     labels = c("minor", "young adult", "adult",
-                               "older adult"))
+                               "older adult")))
+# Yufei: again, for me it is a little lit easier to understand when putting together
+
+# data$age_cut <- cut(data$age, breaks = c(0, 18, 25, 55, Inf),
+#                     labels = c("minor", "young adult", "adult",
+#                                "older adult"))
 
 ```
 
 
 ```{r}
 ggplot(data, aes(age, fill = age_cut)) +
-  geom_histogram(color = "white",
+  geom_histogram(color = "white", # Yufei: The white line added to the col is so helpful for a clearer view of the plot; I will do that to my plots in the future.
                  alpha = .7,
                  bins = 50) + 
   facet_wrap(~data_cycle) +
@@ -349,6 +459,10 @@ ggplot(data, aes(gender, sed)) +
        caption = "NHANES data from 2011-2012, 2013-2014, 2015-2016") +
   guides(fill = "none")
 
+# Yufei: I really like the color set you chose for the plots, but i just feel the yellow color is not that clear when it overlays on the grey background
+```
+
+```{r fig.width= 6}
 # Part of the assignment to examine differences in activity by race and income
 
 ggplot(data, aes(gender, days_active_60)) +
@@ -375,6 +489,8 @@ ggplot(data, aes(gender, days_active_60)) +
        caption = "NHANES data from 2011-2012, 2013-2014, 2015-2016") +
   guides(fill = "none")
 
+# Yufei: there are some overlap on the xlab and I think we can fix it by adding the width of the plot
+
 ```
 
 ```{r}
@@ -391,7 +507,7 @@ fifty_plus <- data %>%
 # with recreational physical activity
 ggplot(data, aes(mod_work, vig_work)) +
   geom_jitter(aes(color = race)) +
-  geom_encircle(aes(mod_work, vig_work),
+  geom_encircle(aes(mod_work, vig_work), # Yufei: this function is so cool! I like these plots very much and I am learning from your codes to use it!
                 data = less_yr,
                 color = "red",
                 size = 2,
@@ -418,6 +534,8 @@ ggplot(data, aes(mod_rec_pa, vig_rec_pa)) +
                 expand = .04) +
   facet_wrap(~data_cycle) +
   scale_color_viridis_d()
+
+# Yufei: the color set you chose is very pretty, but I think it would be best for continuous data; here the race is discrete, and i was wondering if discrete color set makes better sense in presenting their relationships?
 ```
 
 ```{r}
@@ -427,6 +545,7 @@ ggplot(data, aes(forcats::fct_reorder(data_cycle, sed), sed)) +
   geom_col(alpha = .7, position = "dodge2", aes(fill = race)) +
   scale_y_continuous(limits = c(0, 1250)) +
   scale_fill_viridis_d(option = "magma")
+# I am a little bit confused by the meaning of sed. Probably it would be good to change the name? I know this is just an exploratory plot anyway..
 
 
 ggplot(data, aes(data_cycle)) +
@@ -437,13 +556,13 @@ ggplot(data, aes(race)) +
   geom_bar(position = "dodge2", aes(fill = income)) +
   facet_wrap(~data_cycle) +
   coord_flip() +
-  scale_fill_viridis_d()
+  scale_fill_viridis_d() # Yufei: the facet here makes the plot really concise and straightforward!
 
 ggplot(data, aes(gender, days_active_60)) +
   geom_tile(aes(fill = age)) +
   scale_fill_viridis_c()
 
-  ggplot(data, aes(mod_work, vig_work)) +
+ggplot(data, aes(mod_work, vig_work)) +
   geom_smooth(aes(color = race), se = FALSE, method = "lm") +
   facet_wrap(~data_cycle) +
   scale_color_viridis_d() +

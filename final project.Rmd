@@ -21,7 +21,9 @@ library(ggridges)
 library(viridis)
 # devtools::install_github("hrbrmstr/ggalt")
 library(ggalt)
-
+library(ggpubr)
+#added this to help display multiple plots at once
+library(RColorBrewer)
 ```
 
 ```{r}
@@ -307,7 +309,7 @@ data$age_cut <- cut(data$age, breaks = c(0, 18, 25, 55, Inf),
 
 ```
 
-
+## Visualizations set #1
 ```{r}
 ggplot(data, aes(age, fill = age_cut)) +
   geom_histogram(color = "white",
@@ -319,16 +321,18 @@ ggplot(data, aes(age, fill = age_cut)) +
        Title = "Breakdown of Participants by Age",
        subtitle = "Separated by Age Group",
        caption = "NHANES data from 2011-2012, 2013-2014, 2015-2016") +
+  theme_minimal() +
   guides(fill = "none")
 
 # Part of assignment to examine differences in sedentary behaviors by race and income
 
-ggplot(data, aes(gender, sed)) +
+p1 <- ggplot(data, aes(gender, sed)) +
   geom_col(alpha = .7, position = "dodge2", aes(fill = race)) +
   scale_y_continuous(limits = c(0, 1250)) +
   scale_fill_viridis_d() +
   coord_flip() +
   facet_wrap(~data_cycle) +
+  theme_minimal() +
     labs(x = "Gender",
        y = "Sedentary Behaviors",
        Title = "Breakdown of Participants by Gender",
@@ -336,10 +340,11 @@ ggplot(data, aes(gender, sed)) +
        caption = "NHANES data from 2011-2012, 2013-2014, 2015-2016") +
   guides(fill = "none")
 
-ggplot(data, aes(gender, sed)) +
+p2 <- ggplot(data, aes(gender, sed)) +
   geom_col(alpha = .7, position = "dodge2", aes(fill = income)) +
   scale_y_continuous(limits = c(0, 1250)) +
   scale_fill_viridis_d() +
+  theme_minimal() +
   coord_flip() +
   facet_wrap(~data_cycle) +
     labs(x = "Gender",
@@ -351,9 +356,10 @@ ggplot(data, aes(gender, sed)) +
 
 # Part of the assignment to examine differences in activity by race and income
 
-ggplot(data, aes(gender, days_active_60)) +
+p3 <- ggplot(data, aes(gender, days_active_60)) +
   geom_col(alpha = .7, position = "dodge2", aes(fill = race)) +
   scale_fill_viridis_d() +
+  theme_minimal() +
   coord_flip() +
   facet_wrap(~data_cycle) +
     labs(x = "Gender",
@@ -363,9 +369,10 @@ ggplot(data, aes(gender, days_active_60)) +
        caption = "NHANES data from 2011-2012, 2013-2014, 2015-2016") +
   guides(fill = "none")
 
-ggplot(data, aes(gender, days_active_60)) +
+p4 <- ggplot(data, aes(gender, days_active_60)) +
   geom_col(alpha = .7, position = "dodge2", aes(fill = income)) +
   scale_fill_viridis_d() +
+  theme_minimal() +
   coord_flip() +
   facet_wrap(~data_cycle) +
     labs(x = "Gender",
@@ -375,8 +382,18 @@ ggplot(data, aes(gender, days_active_60)) +
        caption = "NHANES data from 2011-2012, 2013-2014, 2015-2016") +
   guides(fill = "none")
 
+
+ggarrange(p1, p2,
+          ncol = 1, nrow = 2)
+
+ggarrange(p4, p3,
+          ncol = 1, nrow = 2)
 ```
 
+###Feedback
+This set of graphs is a really good starting point for your portfolio and I thought you were strategic in the order that you set your plots up in giving the overall frequency picture in the first graph, then moving into the specifics with the subsequent ones. I used the argument ggarrange() to package the Activity and Sedentary plots together, but you might even think about displaying all four graphs together as one visualization. The use of the age cutoffs by color really helps the distribution to be visualized in chucks, so great call on that. One area that could help the Physical Activity plots is to clean up the x-axis ticks by using theme(). One other suggested change that I played with was adding theme_minimal().
+
+## Visualization Set Two
 ```{r}
 less_yr <- data %>%
   filter(race == "mexican" | race == "other_hispanic") %>% 
@@ -389,7 +406,7 @@ fifty_plus <- data %>%
 # These two plots are one plot for my project
 # the first is looking at working physical activity and then the next one is similar
 # with recreational physical activity
-ggplot(data, aes(mod_work, vig_work)) +
+p5 <- ggplot(data, aes(mod_work, vig_work)) +
   geom_jitter(aes(color = race)) +
   geom_encircle(aes(mod_work, vig_work),
                 data = less_yr,
@@ -402,9 +419,10 @@ ggplot(data, aes(mod_work, vig_work)) +
                 size = 2,
                 expand = .04) +
   facet_wrap(~data_cycle) +
+  theme_minimal() +
   scale_color_viridis_d()
 
-ggplot(data, aes(mod_rec_pa, vig_rec_pa)) +
+p6<- ggplot(data, aes(mod_rec_pa, vig_rec_pa)) +
   geom_jitter(aes(color = race), size = 2) +
   geom_encircle(aes(mod_rec_pa, vig_rec_pa),
                 data = less_yr,
@@ -417,36 +435,51 @@ ggplot(data, aes(mod_rec_pa, vig_rec_pa)) +
                 size = 2,
                 expand = .04) +
   facet_wrap(~data_cycle) +
+  theme_minimal() +
   scale_color_viridis_d()
+
+ggarrange(p5, p6,
+          ncol = 1, nrow = 2)
+
 ```
 
+###Feedback
+Very cool! I had no idea that there was a ggencircle and I think it really helps draw attention to categorical differences. I went ahead and used ggarrange() again and added theme_minimal to allow the colors to really pop. 
+
+##Visualization Set Three
 ```{r}
 # exploratory plots
 
 ggplot(data, aes(forcats::fct_reorder(data_cycle, sed), sed)) +
   geom_col(alpha = .7, position = "dodge2", aes(fill = race)) +
   scale_y_continuous(limits = c(0, 1250)) +
-  scale_fill_viridis_d(option = "magma")
+  scale_fill_viridis_d(option = "magma") +
+  theme_minimal()
 
 
 ggplot(data, aes(data_cycle)) +
   geom_bar(aes(fill = fct_reorder(race, age)), position = "dodge2") +
-  scale_fill_viridis_d(option = "magma")
+  scale_fill_brewer(palette = "Dark2")
 
 ggplot(data, aes(race)) +
   geom_bar(position = "dodge2", aes(fill = income)) +
   facet_wrap(~data_cycle) +
   coord_flip() +
-  scale_fill_viridis_d()
+  scale_fill_viridis_d() +
+  theme_minimal()
 
 ggplot(data, aes(gender, days_active_60)) +
   geom_tile(aes(fill = age)) +
-  scale_fill_viridis_c()
+  scale_fill_viridis_c() +
+  theme_minimal()
 
   ggplot(data, aes(mod_work, vig_work)) +
   geom_smooth(aes(color = race), se = FALSE, method = "lm") +
   facet_wrap(~data_cycle) +
   scale_color_viridis_d() +
-  coord_flip()
+  coord_flip() +
+  theme_minimal()
 ```
 
+###Feedback
+You do a great job of packaging the plots together in order to tell a comprehensive story. You may want to try ggarrage() here also, but I will leave that call to you. I went ahead and used theme_minimal() again and also tried ColorBrewer's Dark2 theme on the second plot. One of the issues that I am having on my own plots with viridis is that it plots qualitative data in a gradient so that it does not actually look qualitative. I am sure Daniel has an easy fix, but one way is to go with another palette maker. 

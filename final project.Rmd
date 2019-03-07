@@ -389,6 +389,7 @@ fifty_plus <- data %>%
 # These two plots are one plot for my project
 # the first is looking at working physical activity and then the next one is similar
 # with recreational physical activity
+# is it possible to modify the x and y axis labels a bit to enhance readability? : )
 ggplot(data, aes(mod_work, vig_work)) +
   geom_jitter(aes(color = race)) +
   geom_encircle(aes(mod_work, vig_work),

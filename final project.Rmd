@@ -10,8 +10,8 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
-# install.packages("digest")
-# install.packages("Rcpp")
+# install.packages(c("ggpubr"))
+# devtools::install_github("hrbrmstr/ggalt")
 library(tidyverse)
 library(here)
 library(rio)
@@ -19,11 +19,10 @@ library(nhanesA)
 library(xaringan)
 library(ggridges)
 library(viridis)
-# devtools::install_github("hrbrmstr/ggalt")
 library(ggalt)
 library(ggpubr)
-#added this to help display multiple plots at once
 library(RColorBrewer)
+
 ```
 
 ```{r}
@@ -311,7 +310,9 @@ data$age_cut <- cut(data$age, breaks = c(0, 18, 25, 55, Inf),
 
 ## Visualizations set #1
 ```{r}
-ggplot(data, aes(age, fill = age_cut)) +
+data %>% 
+  filter(age > 0) %>% 
+ggplot(aes(age, fill = age_cut)) +
   geom_histogram(color = "white",
                  alpha = .7,
                  bins = 50) + 
@@ -328,66 +329,68 @@ ggplot(data, aes(age, fill = age_cut)) +
 
 p1 <- ggplot(data, aes(gender, sed)) +
   geom_col(alpha = .7, position = "dodge2", aes(fill = race)) +
-  scale_y_continuous(limits = c(0, 1250)) +
+  scale_y_continuous(limits = c(0, 1000)) +
   scale_fill_viridis_d() +
-  coord_flip() +
   facet_wrap(~data_cycle) +
   theme_minimal() +
     labs(x = "Gender",
        y = "Sedentary Behaviors",
-       Title = "Breakdown of Participants by Gender",
-       subtitle = "Separated by Different Racial/Ethnic Groups",
-       caption = "NHANES data from 2011-2012, 2013-2014, 2015-2016") +
-  guides(fill = "none")
+       title = "Gender Physical Activity & Sedentary Behaviors",
+       subtitle = "Separated by Different Racial/Ethnic Groups", 
+       caption = " ") +
+  guides(fill = "none") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 p2 <- ggplot(data, aes(gender, sed)) +
   geom_col(alpha = .7, position = "dodge2", aes(fill = income)) +
-  scale_y_continuous(limits = c(0, 1250)) +
+  scale_y_continuous(limits = c(0, 1000)) +
   scale_fill_viridis_d() +
   theme_minimal() +
-  coord_flip() +
   facet_wrap(~data_cycle) +
     labs(x = "Gender",
        y = "Sedentary Behaviors",
-       Title = "Breakdown of Participants by Gender",
-       subtitle = "Separated by Different Income",
-       caption = "NHANES data from 2011-2012, 2013-2014, 2015-2016") +
-  guides(fill = "none")
+       title = "Gender Physical Activity & Sedentary Behaviors",
+       subtitle = "Separated by Different Racial/Ethnic Groups",
+       caption = " ") +
+  guides(fill = "none") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 # Part of the assignment to examine differences in activity by race and income
 
-p3 <- ggplot(data, aes(gender, days_active_60)) +
+p3 <- ggplot(data, aes(gender, mod_rec_pa)) +
   geom_col(alpha = .7, position = "dodge2", aes(fill = race)) +
+  scale_y_continuous(limits = c(0, 1000)) +
   scale_fill_viridis_d() +
   theme_minimal() +
-  coord_flip() +
   facet_wrap(~data_cycle) +
     labs(x = "Gender",
-       y = "Days of Engagement in 60 Minutes of Physical Activity ",
-       Title = "Breakdown of Participants by Gender",
-       subtitle = "Separated by Different Racial/Ethnic Groups",
+       y = "Moderate Physical Activity",
+       title = " ",
+       subtitle = " ",
        caption = "NHANES data from 2011-2012, 2013-2014, 2015-2016") +
-  guides(fill = "none")
+  guides(fill = "none") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-p4 <- ggplot(data, aes(gender, days_active_60)) +
+p4 <- ggplot(data, aes(gender, mod_rec_pa)) +
   geom_col(alpha = .7, position = "dodge2", aes(fill = income)) +
+  scale_y_continuous(limits = c(0, 1000)) +
   scale_fill_viridis_d() +
   theme_minimal() +
-  coord_flip() +
   facet_wrap(~data_cycle) +
     labs(x = "Gender",
-       y = "Days of Engagement in 60 Minutes of Physical Activity ",
-       Title = "Breakdown of Participants by Gender",
-       subtitle = "Separated by Different Income",
+       y = "Moderate Physical Activity",
+       title = " ",
+       subtitle = " ",
        caption = "NHANES data from 2011-2012, 2013-2014, 2015-2016") +
-  guides(fill = "none")
+  guides(fill = "none") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 
-ggarrange(p1, p2,
-          ncol = 1, nrow = 2)
+ggarrange(p1, p3,
+          ncol = 2, nrow = 1)
 
-ggarrange(p4, p3,
-          ncol = 1, nrow = 2)
+ggarrange(p2, p4,
+          ncol = 2, nrow = 1)
 ```
 
 ###Feedback
@@ -395,6 +398,9 @@ This set of graphs is a really good starting point for your portfolio and I thou
 
 ## Visualization Set Two
 ```{r}
+his_data <- data %>% 
+  filter(race == "mexican" | race == "other_hispanic")
+
 less_yr <- data %>%
   filter(race == "mexican" | race == "other_hispanic") %>% 
   filter(length_us == "less_year")
@@ -406,7 +412,7 @@ fifty_plus <- data %>%
 # These two plots are one plot for my project
 # the first is looking at working physical activity and then the next one is similar
 # with recreational physical activity
-p5 <- ggplot(data, aes(mod_work, vig_work)) +
+p5 <- ggplot(his_data, aes(mod_work, vig_work)) +
   geom_jitter(aes(color = race)) +
   geom_encircle(aes(mod_work, vig_work),
                 data = less_yr,
@@ -422,7 +428,7 @@ p5 <- ggplot(data, aes(mod_work, vig_work)) +
   theme_minimal() +
   scale_color_viridis_d()
 
-p6<- ggplot(data, aes(mod_rec_pa, vig_rec_pa)) +
+p6<- ggplot(his_data, aes(mod_rec_pa, vig_rec_pa)) +
   geom_jitter(aes(color = race), size = 2) +
   geom_encircle(aes(mod_rec_pa, vig_rec_pa),
                 data = less_yr,

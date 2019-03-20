@@ -1,0 +1,922 @@
+---
+title: "JP's Dashboard On Physical Activity and Sedentary Behaviors"
+output: 
+  flexdashboard::flex_dashboard:
+    theme: cerulean
+    orientation: columns
+    vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(tidyverse)
+library(here)
+library(rio)
+library(nhanesA)
+library(xaringan)
+library(ggridges)
+library(viridis)
+library(ggalt)
+library(ggpubr)
+library(RColorBrewer)
+library(rbokeh)
+library(plotly)
+
+# install.packages("rbokeh")
+# install.packages("flexdashboard")
+```
+
+```{r, include=FALSE}
+# # Initial time to get data from nhanes datasets
+# 
+# # demographics from 2011-2012
+# demo_g <- nhanes('DEMO_G')
+# 
+# # demographics from 2013-2014
+# demo_h <- nhanes('DEMO_H')
+# 
+# # demographics from 2015-2016
+# demo_i <- nhanes('DEMO_I')
+# 
+# 
+# # physical activity data frames 2011-2012
+# paq_g <- nhanes('PAQ_G')
+# 
+# # physical activity data frames 2013-2014
+# paq_h <- nhanes('PAQ_H')
+# 
+# # physical activity data frames 2015-2016
+# paq_i <- nhanes('PAQ_I')
+# 
+# 
+# # Example of exporting data into csv files
+# write.csv(demo_g, "demo_g.csv")
+# write.csv(demo_h, "demo_h.csv")
+# write.csv(demo_i, "demo_i.csv")
+# 
+# write.csv(paq_g, "paq_g.csv")
+# write.csv(paq_h, "paq_h.csv")
+# write.csv(paq_i, "paq_i.csv")
+```
+
+```{r, include=FALSE}
+demo_g <- import(here("data", "demo_g.csv"),
+                setclass = "tbl_df") %>% 
+  janitor::clean_names()
+demo_h <- import(here("data", "demo_h.csv"),
+                setclass = "tbl_df") %>% 
+  janitor::clean_names()
+demo_i <- import(here("data", "demo_i.csv"),
+                setclass = "tbl_df") %>% 
+  janitor::clean_names()
+
+paq_g <- import(here("data", "paq_g.csv"),
+                setclass = "tbl_df") %>% 
+  janitor::clean_names()
+paq_h <- import(here("data", "paq_h.csv"),
+                setclass = "tbl_df") %>% 
+  janitor::clean_names()
+paq_i <- import(here("data", "paq_i.csv"),
+                setclass = "tbl_df") %>% 
+  janitor::clean_names()
+
+super_demo <- full_join(demo_g, demo_h)
+demo <- full_join(super_demo, demo_i)
+
+super_pa <- full_join(paq_g, paq_h)
+pa <- full_join(super_pa, paq_i)
+
+demo %>%
+  count(seqn) %>% 
+  filter(n>1)
+
+pa %>% 
+  count(seqn) %>% 
+  filter(n>1)
+
+complete <- left_join(demo, pa, by = "seqn")
+```
+
+```{r, include=FALSE}
+
+psych::describe(complete, na.rm = TRUE)
+
+complete <- complete %>%
+  dplyr::select(seqn,
+         sddsrvyr,
+         riagendr,
+         ridageyr,
+         ridreth3,
+         dmdborn4,
+         dmdcitzn,
+         dmdyrsus,
+         dmdeduc2,
+         dmdfmsiz,
+         indhhin2,
+         pad615,
+         pad630,
+         pad660, 
+         pad675, 
+         pad680, 
+         paq706,
+         paq710,
+         paq715)
+
+complete <- complete %>%
+   naniar::replace_with_na(replace = list(pad615 = c(7777, 9999),
+     paq715 = c(77, 99),
+     pad630 = c(7777, 9999),
+     pad660 = c(7777, 9999),
+     pad675 = c(7777, 9999),
+     pad680 = c(7777, 9999),
+     paq706 = c(77, 99),
+     paq710 = c(77, 99)))
+
+complete <- complete %>%
+  mutate(data_cycle = case_when(sddsrvyr == 7 ~ "2011-2012",
+                            sddsrvyr == 8 ~ "2013-2014",
+                            sddsrvyr == 9 ~ "2015-2016",
+                            TRUE ~ NA_character_))
+
+complete <- complete %>% 
+  mutate(gender = case_when(riagendr == 1 ~ "Male",
+                            riagendr == 2 ~ "Female",
+                            TRUE ~ NA_character_))
+
+complete <- complete %>% 
+  mutate(age = ridageyr)
+
+complete <- complete %>% 
+  mutate(race = case_when(ridreth3 == 1 ~ "Mexican",
+                       ridreth3 == 2 ~ "Other hispanic",
+                       ridreth3 == 3 ~ "White",
+                       ridreth3 == 4 ~ "Black",
+                       ridreth3 == 6 ~ "Asian",
+                       ridreth3 == 7 ~ "Multi",
+                       TRUE ~ NA_character_))
+
+complete <- complete %>% 
+  mutate(birth_country = case_when(dmdborn4 == 1 ~ "us_born",
+                                dmdborn4 == 2 ~ "other",
+                                TRUE ~ NA_character_))
+
+complete <- complete %>% 
+  mutate(citizen = case_when(dmdcitzn == 1 ~ "citizen",
+                          dmdcitzn == 2 ~ "not_citizen",
+                          TRUE ~ NA_character_))
+
+complete <- complete %>% 
+  mutate(length_us = case_when(dmdyrsus == 1 ~ "less_year",
+                            dmdyrsus == 2 ~ "1_5yr",
+                            dmdyrsus == 3 ~ "5_10yr",
+                            dmdyrsus == 4 ~ "10_15yr",
+                            dmdyrsus == 5 ~ "15_20yr",
+                            dmdyrsus == 6 ~ "20_30yr",
+                            dmdyrsus == 7 ~ "30_40yr",
+                            dmdyrsus == 8 ~ "40_50yr",
+                            dmdyrsus == 9 ~ "50_plus_yr",
+                            TRUE ~ NA_character_))
+
+complete <- complete %>% 
+  mutate(ed = case_when(dmdeduc2 == 1 ~ "less_9",
+                     dmdeduc2 == 2 ~ "9_11",
+                     dmdeduc2 == 3 ~ "highschool",
+                     dmdeduc2 == 4 ~ "aa",
+                     dmdeduc2 == 5 ~ "college_grad",
+                     TRUE ~ NA_character_))
+
+complete <- complete %>% 
+  mutate(household = case_when(dmdfmsiz == 1 ~ "1",
+                            dmdfmsiz == 2 ~ "2",
+                            dmdfmsiz == 3 ~ "3",
+                            dmdfmsiz == 4 ~ "4",
+                            dmdfmsiz == 5 ~ "5",
+                            dmdfmsiz == 6 ~ "6",
+                            dmdfmsiz == 7 ~ "7_plus",
+                            TRUE ~ NA_character_))
+
+complete <- complete %>% 
+  mutate(income = case_when(indhhin2 == 1 ~ "less than 5k",
+                         indhhin2 == 2 ~ "5-10k",
+                         indhhin2 == 3 ~ "10-15k",
+                         indhhin2 == 4 ~ "15-20k",
+                         indhhin2 == 5 ~ "20-25k",
+                         indhhin2 == 6 ~ "25-35k",
+                         indhhin2 == 7 ~ "35-45k",
+                         indhhin2 == 8 ~ "45-55k",
+                         indhhin2 == 9 ~ "55-65k",
+                         indhhin2 == 10 ~ "65-75k",
+                         indhhin2 == 12 ~ NA_character_,
+                         indhhin2 == 13 ~ NA_character_,
+                         indhhin2 == 14 ~ "75-100k",
+                         indhhin2 == 15 ~ "100k or more",
+                         TRUE ~ NA_character_))
+
+complete <- complete %>% 
+  mutate(vig_work = pad615)
+
+complete <- complete %>% 
+  mutate(mod_work = pad630)
+
+complete <- complete %>% 
+  mutate(vig_rec_pa = pad660)
+
+complete <- complete %>% 
+  mutate(mod_rec_pa = pad675)
+
+complete <- complete %>% 
+  mutate(sed = pad680)
+
+complete <- complete %>% 
+  mutate(days_active_60 = case_when(paq706 == 0 ~ "0_day",
+                                 paq706 == 1 ~ "1_day",
+                                 paq706 == 2 ~ "2_day",
+                                 paq706 == 3 ~ "3_day",
+                                 paq706 == 4 ~ "4_day",
+                                 paq706 == 5 ~ "5_day",
+                                 paq706 == 6 ~ "6_day",
+                                 paq706 == 7 ~ "7_day",
+                                 TRUE ~ NA_character_))
+
+complete <- complete %>% 
+  mutate(hours_tv = case_when(paq710 == 0 ~ "less_hour",
+                             paq710 == 1 ~ "1_hour",
+                             paq710 == 2 ~ "2_hours",
+                             paq710 == 3 ~ "3_hours",
+                             paq710 == 4 ~ "4_hours",
+                             paq710 == 5 ~ "5_hours_plus",
+                             paq710 == 8 ~ "no_tv",
+                           TRUE ~ NA_character_))
+
+complete <- complete %>% 
+  mutate(hours_comp = case_when(paq715 == 0 ~ "less_hour",
+                             paq715 == 1 ~ "1_hour",
+                             paq715 == 2 ~ "2_hours",
+                             paq715 == 3 ~ "3_hours",
+                             paq715 == 4 ~ "4_hours",
+                             paq715 == 5 ~ "5_hours_plus",
+                             paq715 == 8 ~ "no_comp",
+                             TRUE ~ NA_character_))
+
+data <- complete %>%
+  select(-2:-19)
+
+data$age_cut <- cut(data$age, breaks = c(0, 18, 25, 55, Inf),
+                    labels = c("minor", "young adult", "adult",
+                               "older adult"))
+
+data$sed_cut <- cut(data$sed, breaks = c(0, 120, 240, 480, Inf),
+                    labels = c("less than 2 hours", "2 to 4 hours",
+                               "4 to 8 hours", "8 or more hours"))
+
+data$sed_cut <- as.factor(data$sed_cut)
+
+data$mod_rec_pa_cut <- cut(data$mod_rec_pa, breaks = c(0, 120, 240, 480, Inf),
+                    labels = c("less than 2 hours", "2 to 4 hours",
+                               "4 to 8 hours", "8 or more hours"))
+
+data$mod_rec_pa_cut <- as.factor(data$mod_rec_pa_cut)
+
+data$vig_rec_pa_cut <- cut(data$vig_rec_pa, breaks = c(0, 120, 240, 480, Inf),
+                    labels = c("less than 2 hours", "2 to 4 hours",
+                               "4 to 8 hours", "8 or more hours"))
+
+data$vig_rec_pa_cut <- as.factor(data$vig_rec_pa_cut)
+
+data$mod_work_cut <- cut(data$mod_work, breaks = c(0, 120, 240, 480, Inf),
+                    labels = c("less than 2 hours", "2 to 4 hours",
+                               "4 to 8 hours", "8 or more hours"))
+
+data$mod_work_cut <- as.factor(data$mod_work_cut)
+
+data$vig_work_cut <- cut(data$vig_work, breaks = c(0, 120, 240, 480, Inf),
+                    labels = c("less than 2 hours", "2 to 4 hours",
+                               "4 to 8 hours", "8 or more hours"))
+
+data$vig_work_cut <- as.factor(data$vig_work_cut)
+
+
+data$sed_cut <- forcats::fct_explicit_na(data$sed_cut)
+data$income <- forcats::fct_explicit_na(data$income)
+data$mod_rec_pa_cut <- forcats::fct_explicit_na(data$mod_rec_pa_cut)
+
+data_race <- data %>% 
+  group_by(gender, race, sed_cut, data_cycle) %>%
+  count() %>% 
+  ungroup() %>% 
+  mutate(prop = n)
+
+data_income <- data %>% 
+  group_by(gender, income, sed_cut, data_cycle) %>%
+  count() %>% 
+  ungroup() %>% 
+  mutate(prop = n)
+
+data_race_pa <- data %>% 
+  group_by(gender, race, mod_rec_pa_cut, data_cycle) %>%
+  count() %>% 
+  ungroup() %>% 
+  mutate(prop = n)
+
+data_income_pa <- data %>% 
+  group_by(gender, income, mod_rec_pa_cut, data_cycle) %>%
+  count() %>% 
+  ungroup() %>% 
+  mutate(prop = n)
+```
+
+Sidebar Title {.sidebar}
+=============================================================
+
+The information presented on all the pages are from the Center for Disease Control and Prevention's [National Health and Nutrition Examination Survey](https://wwwn.cdc.gov/Nchs/Nhanes/)(NHANES) from the years 2011-2016. 
+
+The data presented shows the rates of physical activity and sedentary behaviors between males and females across the different racial/ethnic groups and across different income levels that data were gathered from. These data are separated by the three different data cycles from NHANES. There are tabs for physical activity and sedentary behaviors in the sample as well as interactive plots of the same data. 
+
+Other pages are focused on Latinx participants, with a focus on the associations between recreational forms of physical activity and work-related physical activity. The plots show information on Latinx that are more and less acculturated as well as information on how much different levels of engagement in these various forms of physical activity across the different data cycles.
+
+Lastly, there is some information on the less and more acculturated Latinx in an interactive plot. This plot shows differences in engagement in work and recreational forms of physical activity along with how acculturated participants were. 
+
+Overall, these plots show the differences in rates of physical activity and sedentary behaviors based on race and income. When focusing on Latinx individuals, these plots indicate that there is a lack of engagement in recreational forms of physical activity across all acculturation levels, but most Latinx individuals engage in some level of moderate or vigorous forms of physical activity. 
+
+# Health Behaviors Across Three Different Data Cycles {data-icon="fa-chair"}
+=======================================================================
+
+Column {.tabset}
+-----------------------------------------------------------------------
+
+###Race & Sedentary Behaviors
+```{r}
+data_race %>%
+  filter(is.na(sed_cut) == FALSE) %>% 
+ggplot(aes(gender, prop)) +
+  geom_col(alpha = .7, position = "dodge", aes(fill = race)) +
+  scale_fill_brewer(palette = "Spectral") +
+  facet_wrap(~data_cycle) +
+  theme_minimal() +
+  scale_y_continuous(limits = c(0, 600)) +
+    labs(x = " ",
+       y = "Sedentary Behaviors",
+       title = "Proportion of Sedentary Behaviors Based on Gender",
+       subtitle = "Separated by Different Racial/Ethnic Groups", 
+       caption = "NHANES data from 2011-2012, 2013-2014, 2015-2016") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  theme(legend.position = "bottom", legend.box = "horizontal")
+```
+
+###Race & Sedentary Behaviors (Interactive)
+```{r}
+
+
+p1 <- data_race %>%
+  filter(is.na(sed_cut) == FALSE) %>% 
+ggplot(aes(gender, prop)) +
+  geom_col(alpha = .7, position = "dodge", aes(fill = race)) +
+  scale_fill_brewer(palette = "Spectral") +
+  facet_wrap(~data_cycle) +
+  theme_minimal() +
+  scale_y_continuous(limits = c(0, 600)) +
+    labs(x = " ",
+       y = "Sedentary Behaviors",
+       title = "Proportion of Sedentary Behaviors Based on Gender",
+       subtitle = "Separated by Different Racial/Ethnic Groups", 
+       caption = "NHANES data from 2011-2012, 2013-2014, 2015-2016") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  theme(legend.position = "bottom", legend.box = "horizontal")
+
+ggplotly(p1)
+```
+
+###Income & Sedentary Behaviors
+
+```{r}
+data_income <- data_income %>% 
+  filter(income != "(Missing)")
+
+data_income %>%
+  filter(is.na(sed_cut) == FALSE) %>% 
+  filter(is.na(income) == FALSE) %>% 
+  ggplot(aes(gender, prop)) +
+  geom_col(alpha = .7, position = "dodge", aes(fill = income)) +
+  theme_minimal() +
+  scale_y_continuous(limits = c(0, 600)) +
+  scale_fill_manual(values = c("#C62828", 
+                                 "#283593","#4527A0",
+                                 "#6A1B9A", "#0277BD",
+                                 "#1565C0", "#2E7D32",
+                                 "#00838F","#00695C",
+                                 "#558B2F","#9E9D24",
+                                 "#AD1457", "white")) +
+  facet_wrap(~data_cycle) +
+    labs(x = " ",
+       y = "Sedentary Behaviors",
+       title = "Proportion of Sedentary Behaviors Based on Gender",
+       subtitle = "Separated by Different Income Levels",
+       caption = "NHANES data from 2011-2012, 2013-2014, 2015-2016") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  theme(legend.position = "bottom", legend.box = "horizontal")
+```
+
+###Income & Sedentary Behaviors (Interactive)
+
+```{r}
+data_income <- data_income %>% 
+  filter(income != "(Missing)")
+
+p2 <- data_income %>%
+  filter(is.na(sed_cut) == FALSE) %>% 
+  filter(is.na(income) == FALSE) %>% 
+  ggplot(aes(gender, prop)) +
+  geom_col(alpha = .7, position = "dodge", aes(fill = income)) +
+  theme_minimal() +
+  scale_y_continuous(limits = c(0, 600)) +
+  scale_fill_manual(values = c("#C62828", 
+                                 "#283593","#4527A0",
+                                 "#6A1B9A", "#0277BD",
+                                 "#1565C0", "#2E7D32",
+                                 "#00838F","#00695C",
+                                 "#558B2F","#9E9D24",
+                                 "#AD1457", "white")) +
+  facet_wrap(~data_cycle) +
+    labs(x = " ",
+       y = "Sedentary Behaviors",
+       title = "Proportion of Sedentary Behaviors Based on Gender",
+       subtitle = "Separated by Different Income Levels",
+       caption = "NHANES data from 2011-2012, 2013-2014, 2015-2016") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  theme(legend.position = "bottom", legend.box = "horizontal")
+
+ggplotly(p2)
+```
+
+Column {.tabset}
+-----------------------------------------------------------------------
+
+###Race & Physical Activity
+
+```{r}
+data_race_pa %>%
+  filter(is.na(mod_rec_pa_cut) == FALSE) %>%
+  ggplot(aes(gender, prop)) +
+  geom_col(alpha = .7, position = "dodge", color = "white",
+           aes(fill = race)) +
+  scale_fill_brewer(palette = "Spectral") +
+  theme_minimal() +
+  scale_y_continuous(limits = c(0, 600)) +
+  facet_wrap(~data_cycle) +
+    labs(x = " ",
+       y = "Moderate Physical Activity",
+       title = "Proportion of Moderate Physical Activity Based on Gender",
+       subtitle = "Separated by Different Racial/Ethnic Groups",
+       caption = "NHANES data from 2011-2012, 2013-2014, 2015-2016") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  theme(legend.position = "bottom", legend.box = "horizontal")
+```
+
+###Race & Physical Activity (Interactive)
+```{r}
+
+p3 <- data_race_pa %>%
+  filter(is.na(mod_rec_pa_cut) == FALSE) %>%
+  ggplot(aes(gender, prop)) +
+  geom_col(alpha = .7, position = "dodge", color = "white",
+           aes(fill = race)) +
+  scale_fill_brewer(palette = "Spectral") +
+  theme_minimal() +
+  scale_y_continuous(limits = c(0, 600)) +
+  facet_wrap(~data_cycle) +
+    labs(x = " ",
+       y = "Moderate Physical Activity",
+       title = "Proportion of Moderate Physical Activity Based on Gender",
+       subtitle = "Separated by Different Racial/Ethnic Groups",
+       caption = "NHANES data from 2011-2012, 2013-2014, 2015-2016") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  theme(legend.position = "bottom", legend.box = "horizontal")
+
+ggplotly(p3)
+```
+
+###Income & Physical Activity
+```{r}
+data_income_pa <- data_income_pa %>% 
+  filter(income != "(Missing)")
+
+data_income_pa %>%
+  filter(is.na(mod_rec_pa_cut) == FALSE) %>%
+  filter(is.na(income) == FALSE) %>% 
+  ggplot(aes(gender, prop)) +
+  geom_col(alpha = .7, position = "dodge", aes(fill = income)) +
+  theme_minimal() +
+  scale_y_continuous(limits = c(0, 600)) +
+    scale_fill_manual(values = c("#C62828", 
+                                 "#283593","#4527A0",
+                                 "#6A1B9A", "#0277BD",
+                                 "#1565C0", "#2E7D32",
+                                 "#00838F","#00695C",
+                                 "#558B2F","#9E9D24",
+                                 "#AD1457")) +
+  facet_wrap(~data_cycle) +
+    labs(x = "Gender",
+       y = "Moderate Physical Activity",
+       title = "Proportion of Moderate Physical Activity Based on Gender",
+       subtitle = "Separated by Different Income Levels",
+       caption = "NHANES data from 2011-2012, 2013-2014, 2015-2016") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  theme(legend.position = "bottom", legend.box = "horizontal")
+
+```
+
+###Income & Physical Activity (Interactive)
+```{r}
+data_income_pa <- data_income_pa %>% 
+  filter(income != "(Missing)")
+
+p4 <- data_income_pa %>%
+  filter(is.na(mod_rec_pa_cut) == FALSE) %>%
+  filter(is.na(income) == FALSE) %>% 
+  ggplot(aes(gender, prop)) +
+  geom_col(alpha = .7, position = "dodge", aes(fill = income)) +
+  theme_minimal() +
+  scale_y_continuous(limits = c(0, 600)) +
+    scale_fill_manual(values = c("#C62828", 
+                                 "#283593","#4527A0",
+                                 "#6A1B9A", "#0277BD",
+                                 "#1565C0", "#2E7D32",
+                                 "#00838F","#00695C",
+                                 "#558B2F","#9E9D24",
+                                 "#AD1457")) +
+  facet_wrap(~data_cycle) +
+    labs(x = "Gender",
+       y = "Moderate Physical Activity",
+       title = "Proportion of Moderate Physical Activity Based on Gender",
+       subtitle = "Separated by Different Income Levels",
+       caption = "NHANES data from 2011-2012, 2013-2014, 2015-2016") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  theme(legend.position = "bottom", legend.box = "horizontal")
+
+ggplotly(p4)
+```
+
+
+#Acculturation Data {data-icon="fa-running"}
+=======================================================================
+
+Column {data-width=600}
+------------------------------------------
+
+### Associations between Work and Recreational Physical Activity by Time in United States
+
+```{r}
+
+his_data <- data %>% 
+  filter(race == "Mexican" | race == "Other Hispanic")
+
+less_yr <- data %>%
+  filter(race == "Mexican" | race == "Other Hispanic") %>% 
+  filter(length_us == "less_year" | length_us == "1_5yr")
+
+fifty_plus <- data %>% 
+  filter(race == "Mexican" | race == "Other Hispanic") %>% 
+  filter(length_us == "50_plus_yr" | length_us == "40_50yr")
+
+
+p5 <- ggplot(his_data, aes(vig_rec_pa, vig_work)) +
+  geom_jitter(color = "gray60", alpha = .7) +
+  geom_jitter(data = less_yr, aes(color = length_us)) +
+  geom_jitter(data = fifty_plus, aes(color = length_us)) +
+  geom_encircle(aes(vig_rec_pa, vig_work, color = length_us),
+                data = less_yr,
+                size = 2,
+                expand = .04) +
+  geom_encircle(aes(vig_rec_pa, vig_work, color = length_us),
+                data = fifty_plus,
+                size = 2,
+                expand = .04) +
+  facet_wrap(~data_cycle) +
+  theme_minimal() +
+  scale_color_manual(labels = c("Less than a year",
+                                "1 to 5 years",
+                                "41 to 50 years",
+                                "Over 50 years"),
+                     values = c("#CB4335","#9B59B6",
+                                 "#229954","#2874A6")) +
+  labs(x = "Vigorous Recreational Physical Activity (PA)",
+       y = "Vigorous Work PA",
+       title = "Association between Work and Recreational Physical Activities",
+       subtitle = "Distributions shown between Two Most and Two Least Acculturated Latinx Groups",
+       caption = "NHANES data from 2011-2012, 2013-2014, 2015-2016")
+
+p6 <- ggplot(his_data, aes(mod_rec_pa, mod_work)) +
+  geom_jitter(color = "gray60", alpha = .7) +
+  geom_jitter(data = less_yr, aes(color = length_us)) +
+  geom_jitter(data = fifty_plus, aes(color = length_us)) +
+  geom_encircle(aes(mod_rec_pa, mod_work, color = length_us),
+                data = less_yr,
+                size = 2,
+                expand = .04) +
+  geom_encircle(aes(mod_rec_pa, mod_work, color = length_us),
+                data = fifty_plus,
+                size = 2,
+                expand = .04) +
+  facet_wrap(~data_cycle) +
+  theme_minimal() +
+  scale_color_manual(labels = c("Less than a year",
+                                "1 to 5 years",
+                                "41 to 50 years",
+                                "Over 50 years"),
+                     values = c("#CB4335","#9B59B6",
+                                 "#229954","#2874A6")) +
+  labs(x = "Moderate Recreational Physical Activity (PA)",
+       y = "Moderate Work PA",
+       title = "Association between Work and Recreational Physical Activities",
+       subtitle = "Distributions shown between Two Most and Two Least Acculturated Latinx Groups",
+       caption = "NHANES data from 2011-2012, 2013-2014, 2015-2016")
+  
+ggarrange(p5, p6,
+          ncol = 1, nrow = 2)
+```
+
+Column {.tabset}
+-------------------------------------------
+
+###Length in United States and Amount of Time Engaging in Various Forms of Physical Activity for 2011-2012 Data Cycle
+
+```{r}
+his_tidy <- his_data %>% 
+  filter(length_us != "NA")
+
+tidy_his_2011 <- his_tidy %>% 
+  gather(key = "pa", value = "value", c(-1:-21)) %>% 
+    filter(data_cycle == "2011-2012") %>% 
+  filter(value != "(Missing)")
+
+tidy_his_2011 <- tidy_his_2011 %>% 
+  mutate(length_us = recode(length_us, 'less_year' = "less than a year",
+                            '1_5yr' = "1 to 5 years",
+                            '5_10yr' = "6 to 10 years",
+                            '10_15yr' = "11 to 15 years",
+                            '15_20yr' = "16 to 20 years",
+                            '20_30yr' = "21 to 30 years",
+                            '30_40yr' = "31 to 40 years",
+                            '40_50yr' = "41 to 50 years",
+                            '50_plus_yr' = "over 50 years"),
+         pa = recode(pa, "mod_rec_pa_cut" = 'Mod Rec PA',
+                     "vig_rec_pa_cut" = 'Vig Rec PA',
+                     "mod_work_cut" = 'Mod Work',
+                     "vig_work_cut" = 'Vig Work'))
+
+tidy_his_2011$value <- forcats::fct_relevel(tidy_his_2011$value)
+
+tidy_his_2011 %>% 
+  filter(is.na(value) == FALSE) %>% 
+  filter(is.na(length_us) == FALSE) %>%
+ggplot(aes(fct_reorder(length_us, age), value)) +
+  geom_jitter(aes(color = length_us)) +
+  scale_color_manual(values = c("#F4511E", 
+                                 "#FB8C00","#99FF99",
+                                 "#999966", "#FF00CC",
+                                 "#0066FF", "#1D8348",
+                                 "#16A085","#8E44AD"),
+                     name = "Length of Time in US",
+                     breaks = c("less than a year", 
+                                "1 to 5 years", 
+                                "6 to 10 years", 
+                                "11 to 15 years",
+                                "16 to 20 years", 
+                                "21 to 30 years",
+                                "31 to 40 years", 
+                                "41 to 50 years",
+                                "over 50 years")) +
+  facet_wrap(~pa) +
+  coord_flip() +
+  theme_minimal() +
+  guides(color = "none") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "Length of Time in the United States",
+       y = "Time Spent Engaging in Physical Activity",
+       title = "Differences in Physical Activity by Length of Time",
+       caption = "NHANES data from 2011-2012, 2013-2014, 2015-2016") 
+
+```
+
+###Length in United States and Amount of Time Engaging in Various Forms of Physical Activity for 2013-2014 Data Cycle
+
+```{r}
+tidy_his_2013 <- his_tidy %>% 
+  gather(key = "pa", value = "value", c(-1:-21)) %>% 
+  filter(data_cycle == "2013-2014") %>% 
+filter(value != "(Missing)")
+
+tidy_his_2013 <- tidy_his_2013 %>% 
+  mutate(length_us = recode(length_us, 'less_year' = "less than a year",
+                            '1_5yr' = "1 to 5 years",
+                            '5_10yr' = "6 to 10 years",
+                            '10_15yr' = "11 to 15 years",
+                            '15_20yr' = "16 to 20 years",
+                            '20_30yr' = "21 to 30 years",
+                            '30_40yr' = "31 to 40 years",
+                            '40_50yr' = "41 to 50 years",
+                            '50_plus_yr' = "over 50 years"),
+         pa = recode(pa, "mod_rec_pa_cut" = 'Mod Rec PA',
+                     "vig_rec_pa_cut" = 'Vig Rec PA',
+                     "mod_work_cut" = 'Mod Work',
+                     "vig_work_cut" = 'Vig Work'))
+
+tidy_his_2013$value <- forcats::fct_relevel(tidy_his_2013$value)
+
+tidy_his_2013 %>% 
+  filter(is.na(value) == FALSE) %>%
+  filter(is.na(length_us) == FALSE) %>% 
+ggplot(aes(fct_reorder(length_us, age), value)) +
+  geom_jitter(aes(color = length_us)) +
+  scale_color_manual(values = c("#F4511E", 
+                                 "#FB8C00","#99FF99",
+                                 "#999966", "#FF00CC",
+                                 "#0066FF", "#1D8348",
+                                 "#16A085","#8E44AD"),
+                     name = "Length of Time in US",
+                     breaks = c("less_yr", "1_5yr", 
+                                "5_10yr", "10_15yr",
+                                "15_20yr", "20_30yr",
+                                "30_40yr", "40_50yr",
+                                "50_plus"),
+                     labels = c("Less than a year",
+                                "1 to 5 years",
+                                "6 to 10 years",
+                                "11 to 15 years",
+                                "16 to 20 years",
+                                "21 to 30 years",
+                                "31 to 40 years",
+                                "41 to 50 years",
+                                "Over 50 years")) +
+  facet_wrap(~pa) +
+  coord_flip() +
+  theme_minimal() +
+  guides(color = "none") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+###Length in United States and Amount of Time Engaging in Various Forms of Physical Activity for 2015-2016 Data Cycle
+
+```{r}
+tidy_his_2015 <- his_tidy %>% 
+  gather(key = "pa", value = "value", c(-1:-21)) %>% 
+  filter(data_cycle == "2015-2016") %>% 
+  filter(value != "(Missing)")
+
+tidy_his_2015 <- tidy_his_2015 %>% 
+  mutate(length_us = recode(length_us, 'less_year' = "less than a year",
+                            '1_5yr' = "1 to 5 years",
+                            '5_10yr' = "6 to 10 years",
+                            '10_15yr' = "11 to 15 years",
+                            '15_20yr' = "16 to 20 years",
+                            '20_30yr' = "21 to 30 years",
+                            '30_40yr' = "31 to 40 years",
+                            '40_50yr' = "41 to 50 years",
+                            '50_plus_yr' = "over 50 years"),
+         pa = recode(pa, "mod_rec_pa_cut" = 'Mod Rec PA',
+                     "vig_rec_pa_cut" = 'Vig Rec PA',
+                     "mod_work_cut" = 'Mod Work',
+                     "vig_work_cut" = 'Vig Work'))
+
+tidy_his_2015$value <- forcats::fct_relevel(tidy_his_2015$value)
+
+tidy_his_2015 %>% 
+  filter(is.na(value) == FALSE) %>%
+  filter(is.na(length_us) == FALSE) %>% 
+ggplot(aes(fct_reorder(length_us, age), value)) +
+  geom_jitter(aes(color = length_us)) +
+  scale_color_manual(values = c("#F4511E", 
+                                 "#FB8C00","#99FF99",
+                                 "#999966", "#FF00CC",
+                                 "#0066FF", "#1D8348",
+                                 "#16A085","#8E44AD"),
+                     name = "Length of Time in US",
+                     breaks = c("less_yr", "1_5yr", 
+                                "5_10yr", "10_15yr",
+                                "15_20yr", "20_30yr",
+                                "30_40yr", "40_50yr",
+                                "50_plus"),
+                     labels = c("Less than a year",
+                                "1 to 5 years",
+                                "6 to 10 years",
+                                "11 to 15 years",
+                                "16 to 20 years",
+                                "21 to 30 years",
+                                "31 to 40 years",
+                                "41 to 50 years",
+                                "Over 50 years")) +
+  facet_wrap(~pa) +
+  coord_flip() +
+  theme_minimal() +
+  guides(color = "none") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+```
+
+#Interactive Acculturation Data {data-icon="fa-comment"}
+=======================================================================
+
+Column {.tabset}
+-----------------------------------------------------------------------
+
+###Association Between Vigorous Work & Recreational Physical Activity
+
+```{r}
+less_yr <- data %>%
+  filter(race == "Mexican" | race == "Other Hispanic") %>% 
+  filter(length_us == "less_year" | length_us == "1_5yr") %>% 
+  mutate(length_us = recode(length_us, 'less_year' = "less than a year",
+                            '1_5yr' = "1 to 5 years",
+                            '5_10yr' = "6 to 10 years",
+                            '10_15yr' = "11 to 15 years",
+                            '15_20yr' = "16 to 20 years",
+                            '20_30yr' = "21 to 30 years",
+                            '30_40yr' = "31 to 40 years",
+                            '40_50yr' = "41 to 50 years",
+                            '50_plus_yr' = "over 50 years"))
+
+fifty_plus <- data %>% 
+  filter(race == "Mexican" | race == "Other Hispanic") %>% 
+  filter(length_us == "50_plus_yr" | length_us == "40_50yr") %>% 
+  mutate(length_us = recode(length_us, 'less_year' = "less than a year",
+                            '1_5yr' = "1 to 5 years",
+                            '5_10yr' = "6 to 10 years",
+                            '10_15yr' = "11 to 15 years",
+                            '15_20yr' = "16 to 20 years",
+                            '20_30yr' = "21 to 30 years",
+                            '30_40yr' = "31 to 40 years",
+                            '40_50yr' = "41 to 50 years",
+                            '50_plus_yr' = "over 50 years"))
+
+p5 <- ggplot(his_data, aes(vig_rec_pa, vig_work)) +
+  geom_jitter(color = "gray60", alpha = .7) +
+  geom_jitter(data = less_yr, aes(color = length_us)) +
+  geom_jitter(data = fifty_plus, aes(color = length_us)) +
+  facet_wrap(~data_cycle) +
+  theme_minimal() +
+  scale_color_manual(labels = c("Less than a year",
+                                "1 to 5 years",
+                                "41 to 50 years",
+                                "Over 50 years"),
+                     values = c("#CB4335","#9B59B6",
+                                 "#229954","#2874A6")) +
+  labs(x = "Moderate Recreational Physical Activity (PA)",
+       y = "Moderate Work PA",
+       title = "Association between Work and Recreational Physical Activities",
+       subtitle = "Distributions shown between Two Most and Two Least Acculturated Latinx Groups",
+       caption = "NHANES data from 2011-2012, 2013-2014, 2015-2016")
+
+ggplotly(p5)
+```
+
+###Association Between Moderate Work & Recreational Physical Activity
+
+```{r}
+less_yr <- data %>%
+  filter(race == "Mexican" | race == "Other Hispanic") %>% 
+  filter(length_us == "less_year" | length_us == "1_5yr") %>% 
+  mutate(length_us = recode(length_us, 'less_year' = "less than a year",
+                            '1_5yr' = "1 to 5 years",
+                            '5_10yr' = "6 to 10 years",
+                            '10_15yr' = "11 to 15 years",
+                            '15_20yr' = "16 to 20 years",
+                            '20_30yr' = "21 to 30 years",
+                            '30_40yr' = "31 to 40 years",
+                            '40_50yr' = "41 to 50 years",
+                            '50_plus_yr' = "over 50 years"))
+
+fifty_plus <- data %>% 
+  filter(race == "Mexican" | race == "Other Hispanic") %>% 
+  filter(length_us == "50_plus_yr" | length_us == "40_50yr") %>% 
+  mutate(length_us = recode(length_us, 'less_year' = "less than a year",
+                            '1_5yr' = "1 to 5 years",
+                            '5_10yr' = "6 to 10 years",
+                            '10_15yr' = "11 to 15 years",
+                            '15_20yr' = "16 to 20 years",
+                            '20_30yr' = "21 to 30 years",
+                            '30_40yr' = "31 to 40 years",
+                            '40_50yr' = "41 to 50 years",
+                            '50_plus_yr' = "over 50 years"))
+
+p6 <- ggplot(his_data, aes(mod_rec_pa, mod_work)) +
+  geom_jitter(color = "gray60", alpha = .7) +
+  geom_jitter(data = less_yr, aes(color = length_us)) +
+  geom_jitter(data = fifty_plus, aes(color = length_us)) +
+  facet_wrap(~data_cycle) +
+  theme_minimal() +
+  scale_color_manual(labels = c("Less than a year",
+                                "1 to 5 years",
+                                "41 to 50 years",
+                                "Over 50 years"),
+                     values = c("#CB4335","#9B59B6",
+                                 "#229954","#2874A6")) +
+  labs(x = "Moderate Recreational Physical Activity (PA)",
+       y = "Moderate Work PA",
+       title = "Association between Work and Recreational Physical Activities",
+       subtitle = "Distributions shown between Two Most and Two Least Acculturated Latinx Groups",
+       caption = "NHANES data from 2011-2012, 2013-2014, 2015-2016")
+
+ggplotly(p6)
+```
+ 
